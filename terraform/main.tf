@@ -1,7 +1,3 @@
-# main.tf - корневой файл, включающий все ресурсы
-
-# Провайдер (если его нет в providers.tf)
-
 terraform {
   required_providers {
     yandex = {

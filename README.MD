@@ -30,6 +30,10 @@ terraform apply
 
 - Так же создаётся inventory.ini и ansible.cfg
 
+[inventori.ini](./ansible/inventory.ini)
+
+[ansible.cfg](./ansible/ansible.cfg)
+
 - Все ВМ:
 
 ![yandex_vm](img/yandex_vm.png)

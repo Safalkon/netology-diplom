@@ -11,7 +11,6 @@ variable "yc_folder_id" {
   sensitive   = true
 }
 
-# Выберите ОДИН способ аутентификации:
 variable "service_account_key_file" {
   description = "Path to service account key file (JSON)"
   type        = string
