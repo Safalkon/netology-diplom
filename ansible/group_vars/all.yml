@@ -11,11 +11,6 @@ timezone: "Europe/Moscow"
 # Настройки сети
 internal_network: "10.0.0.0/16"
 
-# Пароли (в продакшене используйте ansible-vault!)
-postgresql_zabbix_password: "ZabbixSecurePass123!"
-elastic_password: "ElasticSecurePass123!"
-kibana_password: "KibanaSecurePass123!"
-
 # Версии ПО
 elasticsearch_version: "8.11.0"
 kibana_version: "8.11.0"
@@ -25,7 +20,6 @@ zabbix_version: "6.0"
 # Мониторинг
 # zabbix_server_ip: "{{ hostvars[groups['zabbix_server'][0]]['ansible_host'] }}"
 zabbix_server_port: 10051
-zabbix_admin_password: "zabbix"
 
 # ELK Stack
 elasticsearch_host: "{{ hostvars[groups['elasticsearch_server'][0]]['ansible_host'] }}"

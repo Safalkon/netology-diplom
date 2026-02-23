@@ -46,6 +46,7 @@ host_key_checking = False
 retry_files_enabled = False
 gathering = smart
 allow_broken_conditionals = True
+interpreter_python = auto_silent
 
 [ssh_connection]
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s

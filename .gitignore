@@ -4,6 +4,7 @@
 .terraform/
 terraform.tfstate.backup
 *.tfvars
+.terraform.lock.hcl
 
 # Yandex Cloud
 *.json

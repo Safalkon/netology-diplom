@@ -13,6 +13,8 @@
 - name: Базовая настройка всех серверов
   hosts: all_servers
   become: yes
+  vars_files:
+  - group_vars/all.yml  
   roles:
     - common
   tags: common

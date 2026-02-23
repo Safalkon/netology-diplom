@@ -11,7 +11,7 @@
   become: yes
 
   vars_files:
-    - "./group_vars/zabbix_server.yml"
+    - "./group_vars/all.yml"
   
   roles:
     - role: geerlingguy.apache
@@ -33,3 +33,4 @@
         zabbix_server_dbpassword: "{{ postgresql_zabbix_password }}"
         zabbix_web_user: www-data
         zabbix_web_group: www-data
+        zabbix_web_admin_password: "{{ zabbix_admin_password }}"
