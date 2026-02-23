@@ -15,7 +15,7 @@ resource "yandex_compute_instance" "elasticsearch" {
     initialize_params {
       image_id = data.yandex_compute_image.ubuntu.id
       size     = local.vm_specs.monitoring.disk_size
-      type     = "network-ssd"
+      type     = "network-hdd"
     }
   }
   
@@ -65,7 +65,7 @@ resource "yandex_compute_instance" "kibana" {
     initialize_params {
       image_id = data.yandex_compute_image.ubuntu.id
       size     = local.vm_specs.monitoring.disk_size
-      type     = "network-ssd"
+      type     = "network-hdd"
     }
   }
   

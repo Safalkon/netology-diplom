@@ -1,17 +1,4 @@
+#  Дипломная работа по профессии «Системный администратор» SYS-47 Сафронов Алексей
 
-
-
-
-ansible -i inventory.ini all -m ping
-
-ansible-galaxy collection install git+https://github.com/netways/ansible-collection-elasticstack.git
-
-ansible-galaxy collection install -r requirements.yml
-
-ansible-galaxy role install -r requirements.yml
-
-
-ansible-playbook -i inventory.ini nginx_setup.yml
-
-ansible-playbook -i inventory.ini zabbix_server.yml
+[Задание к дипломной работе:](https://github.com/netology-code/sys-diplom/tree/diplom-zabbix)  
 

@@ -15,7 +15,7 @@ resource "yandex_compute_instance" "bastion" {
     initialize_params {
       image_id = data.yandex_compute_image.ubuntu.id
       size     = local.vm_specs.bastion.disk_size
-      type     = "network-ssd"
+      type     = "network-hdd"
     }
   }
   

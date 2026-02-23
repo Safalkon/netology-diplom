@@ -46,7 +46,7 @@ resource "yandex_compute_instance_group" "web_ig" {
       initialize_params {
         image_id = data.yandex_compute_image.ubuntu.id
         size     = local.vm_specs.web.disk_size
-        type     = "network-ssd"
+        type     = "network-hdd"
       }
     }
 
@@ -119,20 +119,7 @@ resource "yandex_compute_instance_group" "web_ig" {
     max_expansion   = 0
     startup_duration = 60
   }
-
-  /* health_check {
-    interval            = 5      # 2 секунды
-    timeout             = 4      # 1 секунда
-    unhealthy_threshold = 3      # 2 неудачи
-    healthy_threshold   = 2      # 1 успех достаточно!
-    
-    # Проверяем просто доступность порта 80 (TCP)
-    tcp_options {
-      port = 80
-    }
-  }
-  */
-
+  
   application_load_balancer {
     target_group_name        = "${local.project_prefix}-alb-target-group"
     target_group_description = "ALB target group for web servers"

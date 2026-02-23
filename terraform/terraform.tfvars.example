@@ -1,0 +1,28 @@
+# Yandex Cloud Credentials
+yc_cloud_id = "cloud_id"
+yc_folder_id = "folder_id"
+
+# Выберите ОДИН способ аутентификации:
+service_account_key_file = "./authorized_key.json"
+# или используйте токен:
+# yc_token = "CHANGE_ME"
+
+# Zone Configuration
+yc_zone = "ru-central1-a"
+
+# SSH Configuration
+vm_user = "safalkon"
+ssh_public_key = "ssh-key"
+
+# Environment
+environment = "netology"
+
+# VM Configuration
+vm_preemptible = false
+web_server_count = 2
+
+# CIDR Blocks
+vpc_cidr = "10.0.0.0/16"
+public_subnet_cidr = "10.0.1.0/24"
+private_app_subnet_cidr = "10.0.2.0/24"
+private_data_subnet_cidr = "10.0.3.0/24"

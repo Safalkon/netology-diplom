@@ -8,18 +8,16 @@
 - name: Установка базовых пакетов
   apt:
     name:
-      - curl
-      - wget
-      - git
-      - htop
-      - vim
-      - net-tools
-      - python3-pip
-#      - apt-transport-https
-#      - ca-certificates
-      - software-properties-common
-      - gnupg
-      - lsb-release
+      # - curl
+      # - wget
+      # - git
+      # - htop
+      # - vim
+      # - net-tools
+      # - python3-pip
+      # - software-properties-common
+      # - gnupg
+      # - lsb-release
     state: present
   tags: common
 
