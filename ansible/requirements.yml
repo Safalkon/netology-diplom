@@ -1,0 +1,26 @@
+---
+collections:
+  - name: netways.elasticstack
+  - name: community.zabbix
+    version: 4.1.1
+  - name: ansible.netcommon
+    version: 8.4.0
+  - name: ansible.utils
+    version: 6.0.1
+  - name: ansible.posix
+    version: 1.5.4
+  - name: community.general
+    version: 11.4.1
+  - name: community.postgresql
+    version: 4.2.0
+
+roles:
+  - name: geerlingguy.apache
+    version: 4.2.0
+  - name: geerlingguy.php
+    version: 6.0.0
+  - name: geerlingguy.postgresql
+    version: 4.0.3
+  - name: elastic.elasticsearch
+  - name: geerlingguy.docker
+    version: 8.0.0

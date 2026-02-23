@@ -1,0 +1,35 @@
+---
+- name: install postgresql
+  hosts: zabbix_server
+  become: yes
+  roles:
+    - role: geerlingguy.postgresql
+  tags: postgresql
+
+- name: Установка и настройка Zabbix Server
+  hosts: zabbix_server
+  become: yes
+
+  vars_files:
+    - "./group_vars/zabbix_server.yml"
+  
+  roles:
+    - role: geerlingguy.apache
+    - role: geerlingguy.php
+    - role: community.zabbix.zabbix_server
+    
+      vars:
+        zabbix_server_database: pgsql
+        zabbix_server_database_long: postgresql
+        zabbix_server_dbport: 5432
+        zabbix_server_dbpassword: "{{ postgresql_zabbix_password }}"
+
+    - role: community.zabbix.zabbix_web
+      vars:
+        zabbix_web_url: "http://{{ ansible_default_ipv4.address }}/zabbix"
+        zabbix_server_database: pgsql
+        zabbix_db_type_long: postgresql
+        zabbix_server_dbport: 5432
+        zabbix_server_dbpassword: "{{ postgresql_zabbix_password }}"
+        zabbix_web_user: www-data
+        zabbix_web_group: www-data

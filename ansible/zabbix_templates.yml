@@ -1,0 +1,189 @@
+---
+- name: Gather facts from all servers
+  hosts: all_servers
+  become: no
+  gather_facts: yes
+  vars:
+    ansible_become: false
+
+- name: Register hosts in Zabbix via API and configure monitoring
+  hosts: bastion
+  become: no
+  gather_facts: no
+  vars_files:
+    - group_vars/all.yml
+  vars:
+    ansible_become: false
+    zabbix_api_url: "http://zabbix.ru-central1.internal/zabbix/api_jsonrpc.php"
+    zabbix_api_user: "Admin"
+    zabbix_api_pass: "{{ zabbix_admin_password }}"
+    web_server_required_templates:
+      - "Nginx by Zabbix agent"
+      - "Linux by Zabbix agent"
+  tasks:
+
+    - name: Authenticate to Zabbix API
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers:
+          Content-Type: "application/json"
+        body:
+          jsonrpc: "2.0"
+          method: "user.login"
+          params:
+            username: "{{ zabbix_api_user }}"
+            password: "{{ zabbix_api_pass }}"
+          id: 1
+      register: zabbix_auth
+
+    - name: Set auth headers
+      ansible.builtin.set_fact:
+        api_headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {{ zabbix_auth.json.result }}"
+
+# Получить ID обоих требуемых шаблонов
+
+    - name: Get required template IDs
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "template.get"
+          params:
+            filter:
+              host: "{{ web_server_required_templates }}"
+            output: ["templateid", "host"]
+          id: 12
+      register: required_templates_info
+
+    - name: Set required template IDs as fact
+      ansible.builtin.set_fact:
+        required_template_ids: "{{ required_templates_info.json.result | map(attribute='templateid') | list }}"
+        required_templates_map: "{{ dict(required_templates_info.json.result | map(attribute='host') | zip(required_templates_info.json.result | map(attribute='templateid'))) }}"
+
+    - name: Debug — show discovered template IDs
+      ansible.builtin.debug:
+        msg: "Required templates: {{ required_templates_map }}"
+
+    - name: Fail if not all required templates found
+      ansible.builtin.fail:
+        msg: >-
+          Not all required templates found in Zabbix!
+          Expected: {{ web_server_required_templates }}
+          Found: {{ required_templates_info.json.result | map(attribute='host') | list }}
+      when: required_templates_info.json.result | length != web_server_required_templates | length
+
+# Получить текущие шаблоны веб-серверов
+
+    - name: Get current templates of web servers
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "host.get"
+          params:
+            filter:
+              host: "{{ item }}"
+            output: ["hostid", "host"]
+            selectTemplates: ["templateid"]
+          id: 14
+      loop: "{{ groups['web_servers'] }}"
+      register: web_hosts_templates
+
+#Сформировать итоговый список шаблонов и обновить
+
+    - name: Build merged template list and update web servers
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "host.update"
+          params:
+            hostid: "{{ item.json.result[0].hostid }}"
+            templates: "{{ _merged_templates }}"
+          id: 15
+      vars:
+        _current_ids: >-
+          {{ item.json.result[0].templates | default([]) | map(attribute='templateid') | list }}
+        _missing_ids: >-
+          {{ required_template_ids | difference(_current_ids) }}
+        _merged_templates: >-
+          {{ (item.json.result[0].templates | default([]))
+             + (_missing_ids | map('community.general.dict_kv', 'templateid') | list) }}
+      loop: "{{ web_hosts_templates.results }}"
+      when:
+        - item.json.result | length > 0
+        - _missing_ids | length > 0
+
+# Установить макросы на хостах веб-серверов
+
+    - name: Get host IDs for web servers
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "host.get"
+          params:
+            filter:
+              host: "{{ item }}"
+            output: ["hostid"]
+          id: 16
+      loop: "{{ groups['web_servers'] }}"
+      register: web_hosts_ids
+
+    - name: Set STUB_STATUS_HOST macro on web servers
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "usermacro.create"
+          params:
+            hostid: "{{ item.json.result[0].hostid }}"
+            macro: "{$NGINX.STUB_STATUS.HOST}"
+            value: "127.0.0.1"
+          id: 17
+      loop: "{{ web_hosts_ids.results }}"
+      when: item.json.result | length > 0
+      register: macro_host_create
+      failed_when: >-
+        macro_host_create.json.error is defined and
+        'already exists' not in (macro_host_create.json.error.data | default(''))
+
+    - name: Set STUB_STATUS_PATH macro on web servers
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "usermacro.create"
+          params:
+            hostid: "{{ item.json.result[0].hostid }}"
+            macro: "{$NGINX.STUB_STATUS.PATH}"
+            value: "/nginx_status"
+          id: 18
+      loop: "{{ web_hosts_ids.results }}"
+      when: item.json.result | length > 0
+      register: macro_path_create
+      failed_when: >-
+        macro_path_create.json.error is defined and
+        'already exists' not in (macro_path_create.json.error.data | default(''))

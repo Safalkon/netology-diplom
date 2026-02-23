@@ -1,0 +1,18 @@
+---
+- name: Ожидание SSH на bastion
+  hosts: bastion
+  gather_facts: no
+  tasks:
+    - name: Ждём, пока bastion ответит на SSH
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        delay: 10
+        timeout: 300
+
+- name: Базовая настройка всех серверов
+  hosts: all_servers
+  become: yes
+  roles:
+    - common
+  tags: common

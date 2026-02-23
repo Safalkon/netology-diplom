@@ -1,0 +1,1 @@
+ansible-galaxy collection install git+https://github.com/ansible-collections/community.zabbix.git,4.1.1

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Netology Diplom Project</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        h1 { color: #0066cc; }
+    </style>
+</head>
+<body>
+    <h1>Netology Diplom - High Availability Website</h1>
+    <p>Server: {{ ansible_fqdn }}</p>
+    <p>Zone: {{ zone | default('unknown') }}</p>
+    <p>IP Address: {{ ansible_default_ipv4.address }}</p>
+</body>
+</html>

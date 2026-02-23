@@ -1,0 +1,143 @@
+---
+- name: Gather facts from all servers
+  hosts: all_servers
+  become: no
+  gather_facts: yes
+  vars:
+    ansible_become: false
+
+- name: Register hosts in Zabbix via API
+  hosts: bastion
+  become: no
+  gather_facts: no
+  vars_files:
+    - group_vars/all.yml
+  vars:
+    ansible_become: false
+    zabbix_api_url: "http://zabbix.ru-central1.internal/zabbix/api_jsonrpc.php"
+    zabbix_api_user: "Admin"
+    zabbix_api_pass: "{{ zabbix_admin_password }}"
+  tasks:
+    - name: Authenticate to Zabbix API
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers:
+          Content-Type: "application/json"
+        body:
+          jsonrpc: "2.0"
+          method: "user.login"
+          params:
+            username: "{{ zabbix_api_user }}"
+            password: "{{ zabbix_api_pass }}"
+          id: 1
+      register: zabbix_auth
+
+    - name: Set auth headers
+      ansible.builtin.set_fact:
+        api_headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {{ zabbix_auth.json.result }}"
+
+    - name: Check host group
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "hostgroup.get"
+          params:
+            filter:
+              name: "Linux Servers"
+          id: 2
+      register: hostgroup_check
+
+    - name: Create host group if not exists
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "hostgroup.create"
+          params:
+            name: "Linux Servers"
+          id: 3
+      when: hostgroup_check.json.result | length == 0
+
+    - name: Get host group ID
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "hostgroup.get"
+          params:
+            filter:
+              name: "Linux Servers"
+          id: 4
+      register: hostgroup_info
+
+    - name: Get template ID
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "template.get"
+          params:
+            filter:
+              host: "Linux by Zabbix agent"
+          id: 5
+      register: template_info
+
+    - name: Set IDs
+      ansible.builtin.set_fact:
+        group_id: "{{ hostgroup_info.json.result[0].groupid }}"
+        template_id: "{{ template_info.json.result[0].templateid }}"
+
+    - name: Register each host in Zabbix
+      ansible.builtin.uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        headers: "{{ api_headers }}"
+        body:
+          jsonrpc: "2.0"
+          method: "host.create"
+          params:
+            host: "{{ item }}"
+            groups:
+              - groupid: "{{ group_id }}"
+            templates:
+              - templateid: "{{ template_id }}"
+            interfaces:
+              - type: 1
+                main: 1
+                useip: 0
+                ip: ""
+                dns: "{{ item }}"
+                port: "10050"
+          id: 6
+        status_code:
+          - 200
+      loop: "{{ groups['all_servers'] }}"
+      register: host_create
+      failed_when: >
+        host_create.json.error is defined and
+        'already exists' not in (host_create.json.error.data | default(''))
+
+    - name: Show results
+      ansible.builtin.debug:
+        msg: "Host {{ item.item }}: {{ 'already exists' if item.json.error is defined else 'created' }}"
+      loop: "{{ host_create.results }}"
+      loop_control:
+        label: "{{ item.item }}"

@@ -1,0 +1,119 @@
+---
+- name: Install Docker on all target hosts
+  hosts: elasticsearch:kibana:web_servers
+  become: yes
+  vars:
+    docker_edition: 'ce'
+    docker_package: "docker-{{ docker_edition }}"
+    docker_compose_version: "2.23.0"
+  roles:
+    - role: geerlingguy.docker
+
+- name: Setup Elasticsearch container
+  hosts: elasticsearch
+  become: yes
+  vars:
+    elastic_version: "8.11.0"
+    elastic_data_dir: /var/lib/elasticsearch
+  tasks:
+    - name: Ensure Elasticsearch data directory exists
+      ansible.builtin.file:
+        path: "{{ elastic_data_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Set correct ownership for data directory (UID 1000 for elasticsearch inside container)
+      ansible.builtin.file:
+        path: "{{ elastic_data_dir }}"
+        owner: 1000
+        group: 1000
+        recurse: yes
+        state: directory
+
+    - name: Set vm.max_map_count for Elasticsearch
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: '262144'
+        state: present
+        reload: yes
+
+    - name: Run Elasticsearch container
+      community.docker.docker_container:
+        name: elasticsearch
+        image: "docker.elastic.co/elasticsearch/elasticsearch:{{ elastic_version }}"
+        state: started
+        restart_policy: always
+        volumes:
+          - "{{ elastic_data_dir }}:/usr/share/elasticsearch/data"
+        env:
+          discovery.type: "single-node"
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+        network_mode: host
+
+- name: Setup Kibana container
+  hosts: kibana
+  become: yes
+  vars:
+    elastic_version: "8.11.0"
+    elasticsearch_host: "{{ hostvars[groups['elasticsearch'][0]]['ansible_default_ipv4']['address'] }}"
+  tasks:
+    - name: Run Kibana container
+      community.docker.docker_container:
+        name: kibana
+        image: "docker.elastic.co/kibana/kibana:{{ elastic_version }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "5601:5601"
+        env:
+          ELASTICSEARCH_HOSTS: "http://{{ elasticsearch_host }}:9200"
+          XPACK_SECURITY_ENABLED: "false"
+
+- name: Setup Filebeat on web servers
+  hosts: web_servers
+  become: yes
+  vars:
+    elastic_version: "8.11.0"
+    elasticsearch_host: "{{ hostvars[groups['elasticsearch'][0]]['ansible_default_ipv4']['address'] }}"
+  tasks:
+    - name: Create Filebeat config directory
+      ansible.builtin.file:
+        path: /etc/filebeat
+        state: directory
+        mode: 0755
+
+    - name: Copy Filebeat configuration
+      ansible.builtin.template:
+        src: filebeat.yml.j2
+        dest: /etc/filebeat/filebeat.yml
+        mode: 0644
+      notify: restart filebeat
+
+    - name: Run Filebeat container
+      community.docker.docker_container:
+        name: filebeat
+        image: "docker.elastic.co/beats/filebeat:{{ elastic_version }}"
+        state: started
+        restart_policy: always
+        user: root
+        volumes:
+          - /etc/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+          - /var/log/nginx:/var/log/nginx:ro
+          - /var/lib/docker/containers:/var/lib/docker/containers:ro
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+        env:
+          ELASTICSEARCH_HOST: "{{ elasticsearch_host }}"
+          ELASTICSEARCH_PORT: "9200"
+        command: >
+          -e
+          -E output.elasticsearch.hosts=['{{ elasticsearch_host }}:9200']
+          -E output.elasticsearch.protocol=http
+          -E setup.kibana.host={{ elasticsearch_host }}:5601
+
+  handlers:
+    - name: restart filebeat
+      community.docker.docker_container:
+        name: filebeat
+        state: started
+        restart: yes

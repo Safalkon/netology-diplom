@@ -1,0 +1,26 @@
+# Terraform файлы
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfstate.backup
+*.tfvars
+
+# Yandex Cloud
+*.json
+*.key
+*.pem
+
+# Ansible
+*.retry
+*.vault
+ansible_vault_password
+
+# Логи
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

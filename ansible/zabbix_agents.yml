@@ -1,0 +1,52 @@
+---
+- name: Install and configure Zabbix Agent 2 on all servers
+  hosts: all_servers
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - group_vars/all.yml
+  vars:
+    # Основные настройки агента
+    zabbix_agent2: true
+    zabbix_agent_package: zabbix-agent2
+    zabbix_agent_listenip: "0.0.0.0"
+    zabbix_agent_listenport: 10050
+
+    zabbix_agent_server: >-
+      {%- if inventory_hostname in groups['zabbix_server'] -%}
+        127.0.0.1,{{ zabbix_server_fqdn }}
+      {%- else -%}
+        {{ zabbix_server_fqdn }}
+      {%- endif -%}
+    zabbix_agent_serveractive: "{{ zabbix_server_fqdn }}"
+
+  roles:
+    - role: community.zabbix.zabbix_agent
+
+  tasks:
+    - name: Ensure plugin directory exists
+      file:
+        path: /etc/zabbix/zabbix_agent2.d/plugins.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: inventory_hostname in groups['web_servers']
+
+    - name: Create Nginx plugin configuration for Zabbix Agent 2
+      copy:
+        dest: /etc/zabbix/zabbix_agent2.d/plugins.d/nginx.conf
+        content: |
+          Plugins.Nginx.System.Location=/nginx_status
+          Plugins.Nginx.System.Url=http://127.0.0.1:80
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart zabbix-agent
+      when: inventory_hostname in groups['web_servers']  # только для веб-серверов
+
+  handlers:
+    - name: restart zabbix-agent
+      systemd:
+        name: zabbix-agent2
+        state: restarted
