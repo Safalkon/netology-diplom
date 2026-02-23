@@ -130,7 +130,7 @@ curl -v 89.169.128.213/zabbix
 # [zabbix](89.169.128.213/zabbix)
 
 - Логин: Admin 
-- Пароль: zabbix
+- Пароль (сменил вручную): sfaq657!kfkbo12ds
 
 ![browser_zabbix](img/browser_zabbix.png)
 
@@ -202,6 +202,6 @@ ansible-playbook -i inventory.ini elk_docker.yml --vault-password-file ./.vault_
 # [zabbix:](http://89.169.128.213/zabbix)
 
 - Логин: Admin 
-- Пароль: zabbix
+- Пароль: sfaq657!kfkbo12ds
 
 
