@@ -14,6 +14,7 @@ terraform.tfstate.backup
 *.retry
 *.vault
 ansible_vault_password
+.vault_pass
 
 # Логи
 *.log

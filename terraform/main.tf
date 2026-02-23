@@ -25,5 +25,6 @@ provider "yandex" {
 }
 
 data "yandex_compute_image" "ubuntu" {
-  family = "ubuntu-2204-lts-oslogin"
+#  family = "ubuntu-2204-lts-oslogin"
+  image_id = "fd85qmcpsmrrg53l9082"
 }
